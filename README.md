@@ -21,7 +21,7 @@ in part through a smart use of the Go toolchain and module management system.
   is needed to build the transforms). **The tool should ship with its own Go toolchain**,
   and take advantage of the Go environement vars and its module system, so as **to work
   within a well-defined, hermetic build & setup environment** (see [Sliver](https://github
-  .com/BishopFox/sliver) for a reference usage of an embedded Go toolchain). In the same
+.com/BishopFox/sliver) for a reference usage of an embedded Go toolchain). In the same
   vein, the **framework should allow a user to create, write and use Transforms/Entities
   from within arbitrary filesystem locations**, if used as a library in your program.
 
@@ -37,11 +37,11 @@ in part through a smart use of the Go toolchain and module management system.
 
 - The framework should offer the capacity to create, manage and use more advanced Maltego
   functionality, such as [Machines](https://docs.maltego.com/support/solutions/articles/
-  15000019249-machines-transform-macros-), or even the [Transform Distribution Servers 
-  (iDTS)](https://docs.maltego.com/support/solutions/articles/15000020198-what-is-itds-#
-  the-public-tds-0-0). From the command line tool, users can **start a Transform server, setup
-  its various details** (API tokens, certs, etc), and **easily load arbitrary Transform Sets**.
-  This process should be even more automated than the current Maltego Web UI setup process.
+15000019249-machines-transform-macros-), or even the [Transform Distribution Servers 
+  (iDTS)](https://docs.maltego.com/support/solutions/articles/15000020198-what-is-itds-#the-public-tds-0-0). 
+  From the command line tool, users can **start a Transform server, setup its various details** 
+  (API tokens, certs, etc), and **easily load arbitrary Transform Sets**. This process should 
+  be even more automated than the current Maltego Web UI setup process.
 
 
 ## Documentation
