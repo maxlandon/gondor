@@ -30,7 +30,7 @@ import (
 // type, so that we can use this core Go type as an input in a transform, along
 // with the base Entity type holding all Maltego-related stuff and logic.
 type ValidEntity interface {
-	AsEntity() Entity
+	AsEntity() Entity // The type is able to wrap itself into a maltego.Entity
 }
 
 // Entity - A Go representation of a Maltego Entity type.

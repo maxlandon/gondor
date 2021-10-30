@@ -46,6 +46,12 @@ type MyTransform struct {
 // Do - This function satisfies the maltego.ValidTransform interface.
 // The MyTransform type is now a valid Maltego transform.
 func (t MyTransform) Do(mt maltego.Transform) (err error) {
+
+	// Add and process any arbitrary Go types in this body.
+	// However, you will only be able to return as output Entities
+	// those satisfying the maltego.ValidEntity interface.
+	// Please refer to the pure function example below.
+
 	return
 }
 

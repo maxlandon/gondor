@@ -22,7 +22,9 @@ import (
 	"time"
 )
 
+//
 // Maltego Machines - Specification & Instantiation ------------------------------------------
+//
 
 // MachineRunFunc - A valid Machine script is a Go function that is "self-referencing"
 // a Go native Machine type. Having access to that machine allows you to make use of
@@ -66,7 +68,9 @@ func NewMachinePerpetual(run MachineRunFunc, interval time.Duration) Machine {
 	}
 }
 
-// Maltego Machines - Functionality --------------------------------------------------------
+//
+// Maltego Machines - User API -------------------------------------------------------------
+//
 
 // Log - Print a log message to the Maltego Client Machine run window.
 func (m *Machine) Log(format string, args ...interface{}) {

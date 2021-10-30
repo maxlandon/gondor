@@ -18,12 +18,19 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+//
+// Maltego Transforms - Specification & Instantiation ------------------------------------------
+//
+
 // TransformFunc - This type defines what is the valid implementation of a Transform
 // in Go code. The transform passed as argument is a "self-reference", which gives you
 // access to all the methods for querying, modifying and adding input/output Entities,
 // as well as some of the core Transform settings.
 // This is another way to register a new valid Maltego transform, without
 // wrapping it around a native Go type implementing maltego.ValidTransform.
+//
+// Any error returned from the function will be translated into a Maltego Transform exception.
+// You can return an error at any time within your Tranform function implementation.
 type TransformFunc func(t Transform) (err error)
 
 // Transform - The base Go implementation of a Maltego transform.
@@ -47,12 +54,33 @@ func NewTransform(name string, run TransformFunc) Transform {
 	return t
 }
 
+//
+// Maltego Transforms - User API -------------------------------------------------------------
+//
+
 // AddEntity - Add an Entity to the list of entities to be sent in the Transform response.
 // Generally, you want to call it with either yourGoType.AsEntity() function, or directly
 // passing a maltego.Entity type when you can't/don't want to use a native Go type in the Transform.
 func (t *Transform) AddEntity(e ValidEntity) (err error) {
 	return
 }
+
+// MessageUI - Send a message to be displayed through a popup in the Maltego Client.
+func (t *Transform) MessageUI(format string, args ...interface{}) {
+
+}
+
+// AddError - Instead of directly returning from an error in your Transform,
+// you can add this error to the list of errors that will be returned along
+// the response, for notification in the Maltego client.
+// The arguments passed are in fact wrapped into an error themselves.
+func (t *Transform) AddError(format string, args ...interface{}) {
+
+}
+
+//
+// Transform Internal Implementation -----------------------------------------------
+//
 
 // validateInput - The transform checks that all Entity fields that need
 // to satisfy some requirements/presence actually do that, and other checks.
@@ -65,16 +93,4 @@ func (t *Transform) validateInput() (err error) {
 // and settings are correctly set, and send the result back to the Server.
 func (t *Transform) sendResponse() (err error) {
 	return
-}
-
-// TransformSetting - An individual Transform Setting, which can be customized
-// by a user in control of a Transform type (through its .Settings field).
-type TransformSetting struct {
-	Name     string
-	Display  string
-	Type     string
-	Default  string
-	Optional bool
-	Popup    bool
-	Global   bool
 }
