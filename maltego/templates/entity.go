@@ -57,55 +57,98 @@ type Target struct {
 // It works by the very fact that the base maltego.Entity implements the
 // valid MaltegoEntity itself, so that by returning this entity with your
 // data stored in it, you creating your core Go type as a valid Entity.
-func (t *Target) AsEntity() (e maltego.ValidEntity) {
-	e = maltego.NewEntity(
-		"{{.Template.Namespace}}", // Should default to runtime package path + type Name
-		"Target Environment",      // Default to Name with space and Caps
-		"target",                  // default to name
-		t,                         // Can be nil, but there is not point doing it
-	)
-	// Any additional settings for the Maltego Entity
-	// can be done here, by accessing the e variable.
+func (tgt *Target) AsEntity() (e maltego.Entity) {
+
+	// This call results in an Entity type whose basic/needed operational
+	// settings have been set with, in part, information on the Go type
+	// (here Credential), like the Go module package path, names, etc.
+	//
+	// For instance, the Maltego namespace of the Credential entity is,
+	// by default, the complete Go-module path+name of the Credential type.
+	// Please see the Credential type below for an example where we modify it.
+	return maltego.NewEntityDefault(tgt)
+}
+
+// Credential - A native Go type that has some struct fields declared as properties,
+// and some others ignored by default. You will be able, however to add them on the
+// fly from within a Transform implementation, with entity.AddField().
+type Credential struct {
+	Login      string `display:"Login"`                   // Declaring a new Maltego field
+	PublicKey  []byte `display:"Public Key" strict:"yes"` // This PublicKey is unique among all graph entities
+	PrivateKey []byte // For whatever reason you might want NOT to push the PrivateKey to Maltego
+}
+
+// AsEntity - This type is a valid Maltego entity.
+func (cred *Credential) AsEntity() (e maltego.Entity) {
+
+	// This call results in an Entity type whose basic/needed operational
+	// settings have been set with, in part, information on the Go type
+	// (here Credential), like the Go module package path, names, etc.
+	//
+	// For instance, the Maltego namespace of the Credential entity is,
+	// by default, the complete Go-module path+name of the Credential type.
+	e = maltego.NewEntityDefault(cred)
+
+	// You can still modify the settings if you want
+	e.Link.Reverse()         // This link will be an output to input one.
+	e.Link.Color = "#43eb36" // Must be a valid RGB color code.
+
+	// Add dynamic fields that you don't have in your native
+	// Go type fields, for whatever reasons. Know however that
+	// this is "quite" pointless, as this method acts as constructor
+	// each time your type is used an Entity. Still, you can do it.
+	//
+	// If this case, we might like to read from a file containing
+	// the Public key, which you might not want to do from within
+	// the transform each time.
+	e.AddField(maltego.Field{
+		Name:         "PublicKey", // Will override the c.PublicKey field.
+		Display:      "Public Key",
+		Value:        "your Public Key bytes here",
+		MatchingRule: maltego.MatchStrict,
+	})
+
 	return e
 }
 
-// NewTarget - Instantiate a new {{Entity}} type. This type is compliant with
-// the library's entity.Entity interface, and can be used in a Go transform.
 func main() {
 
-	// Register the entity to a Transform
-	// transform := transform.NewTransform(
-	//         "Transform Display name",
-	//         TranformTest,
-	//         target,
-	// )
+	// Transforms --------------------------------
+	// There are several ways of declaring and
+	// registering valid Go-native Maltego transforms:
 
-	// Create a new entity, with a native Go type as underlying data
-	target := maltego.NewEntity(
-		"{{.Template.Namespace}}",
-		"Target Environment",
-		"target",
-		&Target{},
+	// 1) You declare a maltego.TransformFunc somewhere,
+	// and create a transform directly out of it.
+	transform := maltego.NewTransform(
+		"Transform Display name",
+		MyNativeTransform,
 	)
 
-	// Setting additional details
-	target.Link.Direction = maltego.Bidirectional
+	// 2) You can declare a Go type (struct, whatever), and make
+	// it implement the maltego.ValidTransform interface. This is
+	// handy for several reasons:
+	// - A type can be only a valid MaltegoEntity and not a Transform
+	// - A type can be a valid transform but not an Entity
+	// - A type can be both, if it implements the two interfaces.
+	//
+	// Here, the credential can be both an Entity and a Transform,
+	// but you have to instantiate it first.
+	cred := &Credential{}
+	credentialTransform := maltego.NewTransform(
+		"Transform Display name",
+		cred.Do,
+	)
 
-	// Set the underlying Go type on the fly: when
-	// the transform crafts the response, it will
-	// use this type to produce additional properties.
-	target.SetData(&Target{})
+	// Here, the MyTransform type can only be a transform,
+	// and could not be used as an Entity. This, however,
+	// doesn't change anything to the Transform workflow.
+	myTransform := MyTransform{}
+	transformOnly := maltego.NewTransform(
+		"Transform Display name",
+		myTransform.Do,
+	)
 
-	// Add a field to the entity, regardless of its underlying type.
-	// Field are always added AFTER the fields contained by the Entity
-	// underlying Go type, if there is one.
-	target.AddField(maltego.Field{
-		Name:         "activeDirectoryDomain",
-		Display:      "Active Directory Domain",
-		Alias:        "addomain",
-		Value:        "C://Users",
-		MatchingRule: maltego.MatchLoose,
-	})
-
-	fmt.Println(target)
+	fmt.Println(transform)
+	fmt.Println(credentialTransform)
+	fmt.Println(transformOnly)
 }

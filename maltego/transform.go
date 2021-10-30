@@ -18,22 +18,13 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import (
-	"github.com/maxlandon/gondor/maltego/entity"
-)
-
-type TransformFunc func(t Transform)
-
-// TransformAlt - Any type implementing the Transform interface is automatically
-// a compliant Maltego transform, able to process arbitrary input Entities and
-// return arbitrary output Entities. The interface also allows the user to set
-// meta-level details on the Transform.
-type TransformAlt interface {
-	ValidateInput() error // The transform checks the input Entity compliance and casting to Go type
-	Execute(eData interface{}) error
-	AddEntity(entity.Entity) error
-	SendResponse() error
-}
+// TransformFunc - This type defines what is the valid implementation of a Transform
+// in Go code. The transform passed as argument is a "self-reference", which gives you
+// access to all the methods for querying, modifying and adding input/output Entities,
+// as well as some of the core Transform settings.
+// This is another way to register a new valid Maltego transform, without
+// wrapping it around a native Go type implementing maltego.ValidTransform.
+type TransformFunc func(t Transform) (err error)
 
 // Transform - The base Go implementation of a Maltego transform.
 // This type holds all the information necessary to the correct registration
@@ -41,32 +32,35 @@ type TransformAlt interface {
 type Transform struct {
 	Description string             // Defaults to the Go-doc comment of the user-provided TransformFunc
 	Settings    []TransformSetting // All settings for this Transform (global/local, and all their properties)
-	Input       entity.Entity      // To be replaced by the Entity interface (we also need the Go native type in there)
+	Input       Entity             // To be replaced by the Entity interface (we also need the Go native type in there)
+	run         TransformFunc      // The transform function implementation, declared and passed by the user
 }
 
-// func NewTransform(name string, tr TransformAlt, input entity.Entity) (t Transform) {
-func NewTransform(name string, run TransformFunc, input entity.Entity) (t Transform) {
-	t = Transform{
+// NewTransform - Instantiate a new Transform by passing a valid Transform function
+// implementation. This leaves you the choice on where you want to declare this function
+// whether it is a type method or a pure function (depends on your needs and code), etc.
+func NewTransform(name string, run TransformFunc) Transform {
+	t := Transform{
 		Description: getTransformDescription(run),
+		run:         run,
 	}
+	return t
+}
 
+func (t *Transform) AddEntity(e ValidEntity) (err error) {
 	return
 }
 
-func (t *Transform) AddEntity(e entity.Entity) (err error) {
-	return
-}
-
-// ValidateInput - The transform checks that all Entity fields that need
+// validateInput - The transform checks that all Entity fields that need
 // to satisfy some requirements/presence actually do that, and other checks.
-func (t *Transform) ValidateInput() (err error) {
+func (t *Transform) validateInput() (err error) {
 	return
 }
 
-// SendResponse - Once the core transform implementation has ran, package
+// sendResponse - Once the core transform implementation has ran, package
 // the resulting objects in a Maltego-compliant format, verify required fields
 // and settings are correctly set, and send the result back to the Server.
-func (t *Transform) SendResponse() (err error) {
+func (t *Transform) sendResponse() (err error) {
 	return
 }
 
@@ -80,22 +74,4 @@ type TransformSetting struct {
 	Optional bool
 	Popup    bool
 	Global   bool
-}
-
-type globalConfig struct {
-	Settings []TransformSetting
-}
-
-// GlobalConfigFromFile - Reads the Maltego Transform Configuration file located
-// at path. If not found, returns a default, empty (but non-nil) configuration, and
-// an error to indicate the user that some action might be required for perfect work.
-func GlobalConfigFromFile(path string) (conf *globalConfig, err error) {
-	return
-}
-
-// GlobalConfigFromBytes - Unmarshal a Maltego Transform Configuration as bytes
-// If unmarshaling fails, returns a default, empty (but non-nil) configuration, and
-// an error to indicate the user that some action might be required for perfect work.
-func GlobalConfigFromBytes(data []byte) (conf *globalConfig, err error) {
-	return
 }

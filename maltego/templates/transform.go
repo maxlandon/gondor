@@ -19,48 +19,66 @@ package main
 */
 
 import (
-	"fmt"
-
 	"github.com/maxlandon/gondor/maltego"
 )
 
-// Transform - Enter a description in place of this sentence (leaving the
-// "{{Transform}} -" name, so as to automatically include this
-// comment as a description to your Transform in the Maltego Client.
-type Transform struct {
-	*maltego.Transform
-	target *Target
-}
+// MyForeignTransform - Declaring the implementation of a transform that accepts
+// a foreign, non-Go-native type as an Entity input. Thus, when using this function
+// you can only access the input Entity field through its dedicated methods.
+var MyForeignTransform = func(t maltego.Transform) (err error) {
 
-// Execute - The function implementing your transform functionality.
-func (t *Transform) Execute() (err error) {
-	t.target = &Target{}
-	if err = t.Input.Unmarshal(t.target); err != nil {
+	// However, you have direct access to the input Entity,
+	// without the need for further unmarshaling calls:
+	if t.Input.Notes == "Don't use me, please" {
 		return
 	}
 
 	return
 }
 
-func (tr *Transform) TranformTestAlt(input maltego.Entity) (output maltego.Entity, err error) {
-	// target := input.Data.(*Target)
+// MyTransform - A Go type that we intend to be a valid Maltego Transform.
+type MyTransform struct {
+	// You can add any internal logic in here, which accessorily
+	// means that you can write a Transform implementation around
+	// one of your existing Go types.
+}
+
+// Do - This function satisfies the maltego.ValidTransform interface.
+// The MyTransform type is now a valid Maltego transform.
+func (t MyTransform) Do(mt maltego.Transform) (err error) {
+	return
+}
+
+// MyNativeTransform - Declaring the implementation of a tranform accepting
+// a native Go type as an Entity input, with compile-time validity check.
+var MyNativeTransform = func(t maltego.Transform) (err error) {
+	var target = &Target{}          // If your type is implements maltego.ValidEntity...
+	err = t.Input.Unmarshal(target) // ...You can make this call, checked at compile-time
+
+	// Add an updated Entity version of your target directly,
+	// without any further modification to its Maltego settings.
+	t.AddEntity(target)
+
+	// Or create a new version of your Entity, with all its
+	// default settings that you have declared in your constructor,
+	// and modify them on the fly, applying only once, for this transform.
+	out := target.AsEntity()
+	out.Weight = 200
+	out.Link.Reverse()
+	out.AddOverlay("myOverlayName", maltego.OverlayCenter, maltego.OverlayImage)
+
+	// And finally return this on-the-fly modified entity
+	t.AddEntity(out)
 
 	return
 }
 
-// func TestTransform(t transform.Transform)
+func (cred *Credential) Do(mt maltego.Transform) (err error) {
+	err = mt.Input.Unmarshal(cred) // ...You can make this call, checked at compile-time
 
-var testTransform = func(t maltego.Transform) (err error) {
-
-	var nativeTarget = &Target{}
-	err = t.Input.Unmarshal(nativeTarget)
-	if err != nil {
-		return
-	}
-
-	fmt.Println(nativeTarget.IP)
-
-	t.AddEntity(nativeTarget.AsEntity())
+	// Add an updated Entity version of your credential directly,
+	// without any further modification to its Maltego settings.
+	mt.AddEntity(cred)
 
 	return
 }

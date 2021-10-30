@@ -189,19 +189,32 @@ func NewEntity(namespace, category, alias string, data interface{}) Entity {
 // TODO: check link sync.Mutex not nil when instantiating
 
 // New - Instantiate a working Entity type to be embedded
-func New() Entity {
-	return Entity{
+func NewEntityDefault(data interface{}) Entity {
+	e := Entity{
 		mutex: &sync.RWMutex{},
 	}
+
+	// Get the namespace + Name from the Go runtime package + type
+	// Set the Display name to the type name with spaces and caps
+	// Set the alias
+
+	// Compute default description from the core Go type
+
+	return e
 }
 
 // Unmarshal - A Maltego entity is being passed a Go native type
 // in which to unmarshal its properties. This function is useful
 // when you want to cast an input entity into your native input
 // type, while retaining the possibility of using the Entity.
-func (e *Entity) Unmarshal(eType interface{}) (err error) {
+func (e *Entity) Unmarshal(eType ValidEntity) (err error) {
 
 	// Here, apply custom XML unmarshaling logic, from e to eType
+
+	// If embedded structs, for each marked field in them, do:
+	// structName.FieldName.
+	// If struct is anonymous, ignore structName.
+
 	return
 }
 
