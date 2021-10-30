@@ -72,13 +72,3 @@ var MyNativeTransform = func(t maltego.Transform) (err error) {
 
 	return
 }
-
-func (cred *Credential) Do(mt maltego.Transform) (err error) {
-	err = mt.Input.Unmarshal(cred) // ...You can make this call, checked at compile-time
-
-	// Add an updated Entity version of your credential directly,
-	// without any further modification to its Maltego settings.
-	mt.AddEntity(cred)
-
-	return
-}

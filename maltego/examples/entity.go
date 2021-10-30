@@ -19,8 +19,6 @@ package main
 */
 
 import (
-	"fmt"
-
 	"github.com/maxlandon/gondor/maltego"
 )
 
@@ -111,44 +109,14 @@ func (cred *Credential) AsEntity() (e maltego.Entity) {
 	return e
 }
 
-func main() {
+// Do - The credential type, by implementing the Do() func,
+// also satisfies the maltego.ValidTransform interface.
+func (cred *Credential) Do(mt maltego.Transform) (err error) {
+	err = mt.Input.Unmarshal(cred) // ...You can make this call, checked at compile-time
 
-	// Transforms --------------------------------
-	// There are several ways of declaring and
-	// registering valid Go-native Maltego transforms:
+	// Add an updated Entity version of your credential directly,
+	// without any further modification to its Maltego settings.
+	mt.AddEntity(cred)
 
-	// 1) You declare a maltego.TransformFunc somewhere,
-	// and create a transform directly out of it.
-	transform := maltego.NewTransform(
-		"Transform Display name",
-		MyNativeTransform,
-	)
-
-	// 2) You can declare a Go type (struct, whatever), and make
-	// it implement the maltego.ValidTransform interface. This is
-	// handy for several reasons:
-	// - A type can be only a valid MaltegoEntity and not a Transform
-	// - A type can be a valid transform but not an Entity
-	// - A type can be both, if it implements the two interfaces.
-	//
-	// Here, the credential can be both an Entity and a Transform,
-	// but you have to instantiate it first.
-	cred := &Credential{}
-	credentialTransform := maltego.NewTransform(
-		"Transform Display name",
-		cred.Do,
-	)
-
-	// Here, the MyTransform type can only be a transform,
-	// and could not be used as an Entity. This, however,
-	// doesn't change anything to the Transform workflow.
-	myTransform := MyTransform{}
-	transformOnly := maltego.NewTransform(
-		"Transform Display name",
-		myTransform.Do,
-	)
-
-	fmt.Println(transform)
-	fmt.Println(credentialTransform)
-	fmt.Println(transformOnly)
+	return
 }

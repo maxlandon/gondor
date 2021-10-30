@@ -47,6 +47,9 @@ func NewTransform(name string, run TransformFunc) Transform {
 	return t
 }
 
+// AddEntity - Add an Entity to the list of entities to be sent in the Transform response.
+// Generally, you want to call it with either yourGoType.AsEntity() function, or directly
+// passing a maltego.Entity type when you can't/don't want to use a native Go type in the Transform.
 func (t *Transform) AddEntity(e ValidEntity) (err error) {
 	return
 }
