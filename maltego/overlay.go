@@ -18,6 +18,8 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import "encoding/xml"
+
 // Overlay - An overlay is a piece of information that is displayed
 // at some position relative (close) to the Entity. An overlay can
 // be a piece of text, an image or a color. You specify its position
@@ -25,9 +27,28 @@ package maltego
 // can hold the URL to this image, or in other cases, the name of
 // the Entity property that must be used to find a value.
 type Overlay struct {
-	Value    string          // Either an Entity property name, a URL to an image, etc
-	Position OverlayPosition // The relative position of the item relative to the Entity
-	Type     OverlayType     // The type of overlay that we want to show.
+	PropertyName string          `xml:"property_name,attr"` // Either an Entity property name, a URL to an image, etc
+	Position     OverlayPosition `xml:"position,attr"`      // The relative position of the item relative to the Entity
+	Type         OverlayType     `xml:"type,attr"`          // The type of overlay that we want to show.
+}
+
+// Overlays - Specifies how overlays are stored into an Entity Go type.
+type Overlays map[OverlayPosition]Overlay
+
+// MarshalXML - Overlays implement the xml.Marshaller interface,
+// to wrap themselves as a valid list of Maltego Overlays XML objects.
+func (o Overlays) MarshalXML(e *xml.Encoder, start xml.StartElement) (err error) {
+	if len(o) == 0 {
+		return
+	}
+	if err = e.EncodeToken(start); err != nil {
+		return
+	}
+	for _, overlay := range o {
+		e.Encode(overlay)
+	}
+
+	return e.EncodeToken(start.End())
 }
 
 // OverlayPosition - The position of a Maltego Entity Overlay element.
@@ -47,6 +68,15 @@ type OverlayType string
 
 const (
 	OverlayImage  OverlayType = "image"
-	OverlayColour OverlayType = "color"
+	OverlayColour OverlayType = "colour"
 	OverlayText   OverlayType = "text"
 )
+
+// Label - Used to convey extra information associated with an Entity in the Maltego
+// client GUI. Unlike entity fields, labels are only transmitted in response messages
+// and cannot be passed from transform to transform as a source of input.
+type Label struct {
+	Name    string `xml:"Name,attr"` // The name (key) for the label
+	Content string `xml:",cdata"`    // The content, displayed in Maltego
+	Type    string `xml:"Type,attr"` // The type of content (if empty, defaults to "text/html")
+}

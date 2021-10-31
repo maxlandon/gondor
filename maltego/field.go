@@ -18,6 +18,8 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+import "encoding/xml"
+
 // Field - A property field for a Maltego entity. You can use this
 // type from within a transform, when you want to add a property to
 // it because the input/output entity is either not a native Go type,
@@ -27,21 +29,29 @@ package maltego
 // Note that you can't directly set a field as an overlay when declaring it
 // through this function. You need to reference it again in Entity.AddOverlay().
 type Field struct {
-	Name         string       // The programmatic name, required.
-	Display      string       // The display name of this field
-	Alias        string       // An alias for the field, default to .Name
-	Value        interface{}  // Its value, automatically passed as an XML string
-	MatchingRule MatchingRule // The individual match rule for this field
+	Name         string       `xml:"Name,attr"`         // The programmatic name, required.
+	Display      string       `xml:"DisplayName,attr"`  // The display name of this field
+	MatchingRule MatchingRule `xml:"MatchingRule,attr"` // The individual match rule for this field
+	Alias        string       `xml:"-"`                 // An alias for the field, default to .Name
+	Value        interface{}  `xml:",cdata"`            // Its value, automatically passed as an XML string
 }
 
-// String - The most basic type of Entity field that is available in Gondor,
-// also used by more advanced field types provided by this package.
-// type String struct {
-//         name        string
-//         isValue     bool
-//         displayName string
-//         alias       string
-//         matchRule   MatchingRule // Default is strict, ensured when marshalling XML
-//         err         error
-//         decorator   func() string
-// }
+// Properties - Holds all the Properties of an Entity, used to ensure
+// there is no two properties having the same namespace+Name in the list.
+type Properties map[string]Field
+
+// MarshalXML - Properties implement the xml.Marshaller interface,
+// to wrap themselves as a valid list of Maltego Overlays XML objects.
+func (p Properties) MarshalXML(e *xml.Encoder, start xml.StartElement) (err error) {
+	if len(p) == 0 {
+		return
+	}
+	if err = e.EncodeToken(start); err != nil {
+		return
+	}
+	for _, property := range p {
+		e.Encode(property)
+	}
+
+	return e.EncodeToken(start.End())
+}

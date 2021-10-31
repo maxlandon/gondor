@@ -32,6 +32,10 @@ import (
 // into a Maltego native Machine script.
 // In fact, all functions that you will call in your function are no more than template
 // generators, which work together to produce a valid Maltego equivalent of your function.
+//
+// Therefore, DO NOT USE ANY LANGUAGE CONSTRUCT OTHER THAN FUNCTIONS PROVIDED BY THE MACHINE.
+// In the future, the Machine parser will maybe support more advanced logic translation, but
+// it will be always limited by the Maltego macro language features.
 type MachineRunFunc func(m Machine) error
 
 // Machine - The Go representation of a Maltego Machine, which is nothing
@@ -50,6 +54,10 @@ type Machine struct {
 // NewMachineOnce - Returns a Machine that will run all of its user-defined
 // actions only once, and return. The type returned contains all the methods
 // you need to access the full functionality spectrum of a native Maltego machine.
+//
+// However, DO NOT USE ANY LANGUAGE CONSTRUCT OTHER THAN FUNCTIONS PROVIDED BY THE MACHINE.
+// In the future, the Machine parser will maybe support more advanced logic translation, but
+// it will be always limited by the Maltego macro language features.
 func NewMachineOnce(run MachineRunFunc) Machine {
 	machine := Machine{
 		run: run,
@@ -62,6 +70,10 @@ func NewMachineOnce(run MachineRunFunc) Machine {
 //
 // Other than this, this Machine is STRICTLY identical to the one returned by
 // NewMachineOnce(), and this applies to functionality set it gives you access to.
+//
+// Therefore, DO NOT USE ANY LANGUAGE CONSTRUCT OTHER THAN FUNCTIONS PROVIDED BY THE MACHINE.
+// In the future, the Machine parser will maybe support more advanced logic translation, but
+// it will be always limited by the Maltego macro language features.
 func NewMachinePerpetual(run MachineRunFunc, interval time.Duration) Machine {
 	return Machine{
 		run: run,

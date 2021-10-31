@@ -18,19 +18,20 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// MatchingRule - Matching rules are used to specify how an entity will be
-// merged in the Maltego user interface. Strict matching specifies that an
-// entity will only be merged with another if all it's fields (including the
-// value) are equal. Loose matching specifies that two entities will be merged
-// if only the entity values are equal.
-type MatchingRule string
+// Request - The representation of a Maltego Message, which holds part of
+// the data passed by the Maltego Client when requesting to run a Transform.
+type Request struct {
+	Value      string
+	Type       string
+	Weight     int
+	Slider     int
+	Geneaology []Geneaology
+}
 
-const (
-	// MatchStrict - Strict matching specifies that an entity will only be
-	// merged with another if all it's fields (including the value) are equal.
-	MatchStrict MatchingRule = "strict"
-
-	// MatchLoose - Loose matching specifies that two entities
-	// will be merged if only the entity values are equal.
-	MatchLoose MatchingRule = "loose"
-)
+// Geneaology - A geneaologic node, member of a Geneaology
+// (list of nodes) transmitted in a Maltego Transform Request.
+type Geneaology struct {
+	Name    string
+	OldName string
+	Type    string
+}

@@ -22,7 +22,7 @@ import "sync"
 
 // Link - Access and set all settings for the link to/from this entity
 type Link struct {
-	Name       string
+	Label      string
 	Style      LinkStyle
 	Thickness  LineThickness
 	ShowLabel  LinkShowLabel
@@ -32,15 +32,17 @@ type Link struct {
 	mutex      *sync.RWMutex
 }
 
+// TODO: check link sync.Mutex not nil when instantiating
+
 // Reverse - Set the reverse direction for this Entity link:
 // insted of being Input => Output, set it to Input <= Output.
-func (l Link) Reverse() {
+func (l *Link) Reverse() {
 	l.Direction = OutputToInputLink
 }
 
 // AddField - Exactly as you can AddField() to an entity,
 // you can add custom property fields to an Entity link.
-func (l Link) AddField(f Field) {
+func (l *Link) AddField(f Field) {
 	l.mutex.RLock()
 	defer l.mutex.RUnlock()
 	l.properties = append(l.properties, f)
