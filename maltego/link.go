@@ -1,7 +1,5 @@
 package maltego
 
-import "sync"
-
 /*
    Gondor - Go Maltego Transform Framework
    Copyright (C) 2021 Maxime Landon
@@ -29,7 +27,6 @@ type Link struct {
 	Color      string
 	Direction  LinkDirection
 	properties []Field // Additional custom Link fields
-	mutex      *sync.RWMutex
 }
 
 // TODO: check link sync.Mutex not nil when instantiating
@@ -43,8 +40,6 @@ func (l *Link) Reverse() {
 // AddField - Exactly as you can AddField() to an entity,
 // you can add custom property fields to an Entity link.
 func (l *Link) AddField(f Field) {
-	l.mutex.RLock()
-	defer l.mutex.RUnlock()
 	l.properties = append(l.properties, f)
 }
 

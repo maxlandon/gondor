@@ -251,9 +251,10 @@ func (e *Entity) TranslateProperties() (err error) {
 		Value:   e.Link.Label,
 	})
 	e.AddProperty(Field{
-		Name:    "link#maltego.link.direction",
-		Display: "link#maltego.link.direction", // ??
-		Value:   e.Link.Direction,
+		Name:         "link#maltego.link.direction",
+		Display:      "link#maltego.link.direction", // ??
+		MatchingRule: MatchLoose,
+		Value:        e.Link.Direction,
 	})
 	for _, property := range e.Link.properties {
 		e.AddProperty(property)

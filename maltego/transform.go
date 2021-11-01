@@ -45,15 +45,13 @@ type TransformFunc func(t *Transform) (err error)
 // and functioning of an equivalent Maltego Client Transform, and exactly as
 // in the Python code, is NOT restricted to any type of output Entity.
 type Transform struct {
-	Description string             // Defaults to the Go-doc comment of the user-provided TransformFunc
-	Settings    []TransformSetting // All settings for this Transform (global/local, and all their properties)
-	Request     Request            // Other information and settings passed by the Maltego Client
-	Input       Entity             // To be replaced by the Entity interface (we also need the Go native type in there)
-	run         TransformFunc      // The transform function implementation, declared and passed by the user
-	entities    []Entity           // All entities to be returned as the Transform output.
-	messages    []MessageUI        // Transform log messages
-	exceptions  []Exception        // All errors throwed during execution.
-	mutex       *sync.RWMutex      // Concurrency
+	Description string        // Defaults to the Go-doc comment of the user-provided TransformFunc
+	Request     Message       // The incoming Transform request, input Entity, and all transform settings.
+	run         TransformFunc // The transform function implementation, declared and passed by the user
+	entities    []Entity      // All entities to be returned as the Transform output.
+	messages    []MessageUI   // Transform log messages
+	exceptions  []Exception   // All errors throwed during execution.
+	mutex       *sync.RWMutex // Concurrency
 }
 
 // NewTransform - Instantiate a new Transform by passing a valid Transform function
@@ -69,7 +67,6 @@ func NewTransform(name string, run TransformFunc, settings ...TransformSetting) 
 	t := Transform{
 		Description: getTransformDescription(run),
 		run:         run,
-		Settings:    settings,
 		mutex:       &sync.RWMutex{},
 	}
 	return t
@@ -98,7 +95,7 @@ func (t *Transform) AddEntity(e ValidEntity) (err error) {
 func (t *Transform) Debugf(format string, args ...interface{}) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	msg := fmt.Sprintf(format, args)
+	msg := fmt.Sprintf(format, args...)
 	t.messages = append(t.messages, MessageUI{Text: msg, Type: "Debug"})
 }
 
@@ -106,7 +103,7 @@ func (t *Transform) Debugf(format string, args ...interface{}) {
 func (t *Transform) Infof(format string, args ...interface{}) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	msg := fmt.Sprintf(format, args)
+	msg := fmt.Sprintf(format, args...)
 	t.messages = append(t.messages, MessageUI{Text: msg, Type: "Inform"})
 }
 
@@ -114,7 +111,7 @@ func (t *Transform) Infof(format string, args ...interface{}) {
 func (t *Transform) Warnf(format string, args ...interface{}) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	msg := fmt.Sprintf(format, args)
+	msg := fmt.Sprintf(format, args...)
 	t.messages = append(t.messages, MessageUI{Text: msg, Type: "Warning"})
 }
 
@@ -124,7 +121,7 @@ func (t *Transform) Warnf(format string, args ...interface{}) {
 func (t *Transform) Errorf(format string, args ...interface{}) error {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
-	msg := fmt.Sprintf(format, args)
+	msg := fmt.Sprintf(format, args...)
 	t.exceptions = append(t.exceptions, Exception(msg))
 	return errors.New(msg)
 }
@@ -133,20 +130,17 @@ func (t *Transform) Errorf(format string, args ...interface{}) error {
 // Transform Internal Implementation -----------------------------------------------
 //
 
-// unmarshalXML - Unmarshal a Transform Request passed as XML (sent over HTTP).
-func (t *Transform) unmarshalXML() (err error) {
-	return
-}
-
-// unmarshalArgs - Unmarshal a local Transform Request, invoked via command-line args.
-func (t *Transform) unmarshalArgs() (err error) {
-	return
-}
-
-// validateInput - The transform checks that all Entity fields that need
-// to satisfy some requirements/presence actually do that, and other checks.
-func (t *Transform) validateInput() (err error) {
-	return
+// newInstanceFromRequest - Instantiate a new transform instance, copying a
+// few of the fields from us (the model), and populating with a new Request.
+func (t *Transform) newInstanceFromRequest(request Message) *Transform {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	return &Transform{
+		Description: t.Description,
+		Request:     request,
+		run:         t.run,
+		mutex:       &sync.RWMutex{},
+	}
 }
 
 // marshalOutput - The transform packages the output Entities within an XML string.
@@ -176,11 +170,4 @@ func (t *Transform) marshalOutput(runErr error) (out []byte, err error) {
 
 	// Marshal the overall message and its content.
 	return xml.Marshal(message)
-}
-
-// sendResponse - Once the core transform implementation has ran, package
-// the resulting objects in a Maltego-compliant format, verify required fields
-// and settings are correctly set, and send the result back to the Server.
-func (t *Transform) sendResponse() (err error) {
-	return
 }

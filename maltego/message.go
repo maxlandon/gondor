@@ -18,13 +18,59 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+)
 
 // Message - A type containing all the output elements of a Transform.
 type Message struct {
-	x         xml.Name
+	x xml.Name // Modify the xml tag name for this type
+
+	// Request
+	Value      string             `xml:"-"`
+	Type       string             `xml:"-"`
+	Weight     int                `xml:"Weight"`
+	Slider     int                `xml:"-"`
+	Geneaology []Geneaology       `xml:"Geneaology"`      // All the parent transforms and entities tree
+	Entity     Entity             `xml:"-"`               // A unique input Entity
+	Settings   []TransformSetting `xml:"TransformFields"` // Settings for Transform (global/local, and their properties)
+
+	// Response
 	Response  TransformResponseMessage  `xml:"MaltegoTransformResponseMessage,omitempty"`
 	Exception TransformExceptionMessage `xml:"MaltegoTransformExceptionMessage,omitempty"`
+}
+
+// UnmarshalXML - The Message type needs to do a bit of custom
+// XML unmarshalling because of unwished lists to process.
+func (m Message) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+
+	// Temporary types/structs for deserialing fields that cannot be
+	// directly unmarshaled into the message, because they are lists.
+	type slider = struct {
+		SoftLimit int `xml:"SoftLimit,attr"`
+	}
+	temp := struct {
+		// Input
+		Values   []string `xml:"Value"`
+		Entities []Entity `xml:"Entity"`
+		// Transform settings
+		Slider slider `xml:"Limits"`
+	}{}
+	if err = d.Decode(&temp); err != nil {
+		return
+	}
+
+	// Then we can decode the whole Message type.
+	if err = d.Decode(&m); err != nil {
+		return
+	}
+
+	// And finally write the temp struct contents to the Message
+	m.Entity = temp.Entities[0]      // Hard-coded in Maltego Python/Go libs
+	m.Value = temp.Values[0]         // Same hard-coding
+	m.Slider = temp.Slider.SoftLimit // And finally, the limit of output entities
+
+	return
 }
 
 // TransformResponseMessage - A type containing all the output elements of a Transform.

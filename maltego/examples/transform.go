@@ -29,45 +29,52 @@ var MyForeignTransform = func(t maltego.Transform) (err error) {
 
 	// However, you have direct access to the input Entity,
 	// without the need for further unmarshaling calls:
-	if t.Input.Notes == "Don't use me, please" {
-		return
-	}
 
 	return
 }
 
-// MyTransform - A Go type that we intend to be a valid Maltego Transform.
-type MyTransform struct {
+// UpdaterTransform - A Go type that we intend to be a valid Maltego Transform.
+type UpdaterTransform struct {
 	// You can add any internal logic in here, which accessorily
 	// means that you can write a Transform implementation around
 	// one of your existing Go types.
 }
 
-// Do - This function satisfies the maltego.ValidTransform interface.
+// Do - This function is a valid maltego.TransformFunc.
 // The MyTransform type is now a valid Maltego transform.
-func (t MyTransform) Do(mt maltego.Transform) (err error) {
+// Note that you can declare any number of differently named
+// methods around your type: as long as their signature is the
+// following, you can register them all as different Transforms.
+func (t UpdaterTransform) Do(mt *maltego.Transform) (err error) {
+
+	// You still have access to the transform input Entity:
+	mt.Request.Entity.AddProperty(maltego.Field{Display: "New Field"})
 
 	// Add and process any arbitrary Go types in this body.
 	// However, you will only be able to return as output Entities
 	// those satisfying the maltego.ValidEntity interface.
 	// Please refer to the pure function example below.
 
+	// We have added a field to the input entity, it's obviously
+	// because our transform is (in part ?) an "updating" transform.
+	mt.AddEntity(mt.Request.Entity)
+
 	return
 }
 
-// MyNativeTransform - Declaring the implementation of a tranform accepting
+// ProducerTransform - Declaring the implementation of a tranform accepting
 // a native Go type as an Entity input, with compile-time validity check.
-var MyNativeTransform = func(t maltego.Transform) (err error) {
-	var target = &Target{}          // If your type is implements maltego.ValidEntity...
-	err = t.Input.Unmarshal(target) // ...You can make this call, checked at compile-time
+var ProducerTransform = func(t *maltego.Transform) (err error) {
 
-	// Add an updated Entity version of your target directly,
-	// without any further modification to its Maltego settings.
-	t.AddEntity(target)
+	var target = &Target{}                   // If your type is implements maltego.ValidEntity...
+	err = t.Request.Entity.Unmarshal(target) // ...You can make this call, checked at compile-time
 
-	// Or create a new version of your Entity, with all its
-	// default settings that you have declared in your constructor,
-	// and modify them on the fly, applying only once, for this transform.
+	// You can create a new version of your Entity, with all its default settings
+	// that you have declared in your constructor, and modify them on the fly,
+	// applying only once, for this transform.
+	//
+	// WARNING: THIS DOES NOT PASS THE INPUT ENTITY STATE
+	// (because the target is a NEW valid Entity instance)
 	out := target.AsEntity()
 	out.Weight = 200
 	out.Link.Reverse()

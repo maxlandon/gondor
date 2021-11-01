@@ -64,7 +64,7 @@ func (tgt *Target) AsEntity() (e maltego.Entity) {
 	// For instance, the Maltego namespace of the Credential entity is,
 	// by default, the complete Go-module path+name of the Credential type.
 	// Please see the Credential type below for an example where we modify it.
-	return maltego.NewEntityDefault(tgt)
+	return maltego.NewEntity(tgt)
 }
 
 // Credential - A native Go type that has some struct fields declared as properties,
@@ -85,7 +85,7 @@ func (cred *Credential) AsEntity() (e maltego.Entity) {
 	//
 	// For instance, the Maltego namespace of the Credential entity is,
 	// by default, the complete Go-module path+name of the Credential type.
-	e = maltego.NewEntityDefault(cred)
+	e = maltego.NewEntity(cred)
 
 	// You can still modify the settings if you want
 	e.Link.Reverse()         // This link will be an output to input one.
@@ -99,23 +99,27 @@ func (cred *Credential) AsEntity() (e maltego.Entity) {
 	// If this case, we might like to read from a file containing
 	// the Public key, which you might not want to do from within
 	// the transform each time.
-	e.AddField(maltego.Field{
+	e.AddProperty(maltego.Field{
 		Name:         "PublicKey", // Will override the c.PublicKey field.
 		Display:      "Public Key",
 		Value:        "your Public Key bytes here",
 		MatchingRule: maltego.MatchStrict,
 	})
 
+	e.AddOverlay("PublicKey", maltego.OverlayNorth, maltego.OverlayText)
+	e.IconURL = "http://domain.dom/image.png"
+
 	return e
 }
 
 // Do - The credential type, by implementing the Do() func,
 // also satisfies the maltego.ValidTransform interface.
-func (cred *Credential) Do(mt maltego.Transform) (err error) {
-	err = mt.Input.Unmarshal(cred) // ...You can make this call, checked at compile-time
+func (cred *Credential) Do(mt *maltego.Transform) (err error) {
 
-	// Add an updated Entity version of your credential directly,
-	// without any further modification to its Maltego settings.
+	// You can make this call, checked at compile-time
+	err = mt.Request.Entity.Unmarshal(cred)
+
+	// Completely overwrite the input Entity settings
 	mt.AddEntity(cred)
 
 	return

@@ -18,16 +18,6 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// Request - The representation of a Maltego Message, which holds part of
-// the data passed by the Maltego Client when requesting to run a Transform.
-type Request struct {
-	Value      string
-	Type       string
-	Weight     int
-	Slider     int
-	Geneaology []Geneaology
-}
-
 // Geneaology - A geneaologic node, member of a Geneaology
 // (list of nodes) transmitted in a Maltego Transform Request.
 type Geneaology struct {

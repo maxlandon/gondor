@@ -19,8 +19,6 @@ package main
 */
 
 import (
-	"fmt"
-
 	"github.com/maxlandon/gondor/maltego"
 )
 
@@ -34,7 +32,7 @@ func main() {
 	// and create a transform directly out of it.
 	transform := maltego.NewTransform(
 		"Transform Display name",
-		MyNativeTransform,
+		ProducerTransform,
 	)
 
 	// 2) You can declare a Go type (struct, whatever), and make
@@ -55,13 +53,28 @@ func main() {
 	// Here, the MyTransform type can only be a transform,
 	// and could not be used as an Entity. This, however,
 	// doesn't change anything to the Transform workflow.
-	myTransform := MyTransform{}
+	myTransform := UpdaterTransform{}
 	transformOnly := maltego.NewTransform(
 		"Transform Display name",
 		myTransform.Do,
 	)
 
-	fmt.Println(transform)
-	fmt.Println(credentialTransform)
-	fmt.Println(transformOnly)
+	// Marshalling an Entity to XML
+	credential := cred.AsEntity()
+	credential.TranslateProperties()
+	credential.AddDisplayInformation("My Display Title", "This Content")
+
+	// We will serve all our transforms on one server instance
+	server := maltego.NewTransformServer(nil)
+
+	// All transforms are automatically bound to a URL path
+	// matching their complete namespace + Name, and this will
+	// be equivalent to any Registry Configurations that you
+	// might load into a Transform Distribution Server.
+	server.RegisterTransform(&credentialTransform)
+	server.RegisterTransform(&transformOnly)
+
+	// Start serving the transforms, supposing -here- that we loaded
+	// a complete Transform & Registry configuration, ports, TLS, etc.
+	server.ListenAndServe()
 }
