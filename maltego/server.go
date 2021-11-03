@@ -20,9 +20,6 @@ package maltego
 
 import (
 	"crypto/tls"
-	"encoding/xml"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"sync"
 )
@@ -30,28 +27,39 @@ import (
 // TransformServer - A server holding all its registered Transforms,
 // serving them, either through HTTP or through local invocation.
 type TransformServer struct {
-	config     *globalConfig         // A configuration applying to all transforms, or the server.
-	transforms map[string]*Transform // All user-registered transforms
-	hs         http.Server
-	mux        *http.ServeMux
-	mutex      *sync.RWMutex // Concurrency
+	// Information
+	Name           string             // Generally you don't need to set the name
+	Description    string             // You can set a description for your Transform Server
+	URL            string             // Set at runtime when the HTTP server starts, or when config output.
+	LastSync       string             // Last time the server whas registered, you don't need to set this.
+	Protocol       string             // You don't need to set the protocol yourself
+	Authentication AuthenticationType // The default authentication is None
+	Enabled        bool               // The transform server is always enabled by default
+	Transforms     Transforms         // All user-registered transforms
+	Distribution                      // The distribution for this server
+
+	// Runtime HTTP
+	hs    http.Server
+	mux   *http.ServeMux
+	mutex *sync.RWMutex // Concurrency
 }
 
 // NewTransformServer - Create a new Transform Server instance,
 // optionally passing a Maltego configuration file (for global
 // transform settings, HTTP security details, etc)
-func NewTransformServer(config *globalConfig) *TransformServer {
+func NewTransformServer(config interface{}) *TransformServer {
 	ts := &TransformServer{
-		config: config,
-		hs:     http.Server{},
-		mux:    http.NewServeMux(),
-		mutex:  &sync.RWMutex{},
+		Name:        "Local",
+		Description: "Go Local Transforms, hosted on this machine.",
+
+		// config: config,
+		hs:    http.Server{},
+		mux:   http.NewServeMux(),
+		mutex: &sync.RWMutex{},
 	}
 
-	// Make a default config if needed
-	if config == nil {
-
-	}
+	// Make a default Maltego Distribution holding us
+	// as its unique Maltego Server.
 
 	return ts
 }
@@ -65,7 +73,7 @@ func (ts *TransformServer) RegisterTransform(t *Transform) {
 	defer ts.mutex.RUnlock()
 
 	// Map the transform to the server
-	ts.transforms["transform.Namespace"] = t
+	ts.Transforms["transform.Namespace"] = t
 
 	// And to the HTTP server
 	ts.mux.HandleFunc("transform.Namespace", ts.transformHandler)
@@ -97,53 +105,15 @@ func (ts *TransformServer) ListenAndServeTLS(addr string, tlsConfig *tls.Config)
 func (ts *TransformServer) GetTransform(path string) *Transform {
 	ts.mutex.Lock()
 	defer ts.mutex.Unlock()
-	return ts.transforms[path]
+	return ts.Transforms[path]
 }
 
-// transformHandler - Handle a request to run a Transform from a Maltego Client: unmarshal the Request,
-// pass it to a Transform, run the latter and return its output, regardless of the outcome.
-func (ts *TransformServer) transformHandler(w http.ResponseWriter, r *http.Request) {
+//
+// Maltego Transform Server - Internal Implementation ------------------------------------------
+//
 
-	// Get the transform transform keyed with the request path
-	transform := ts.GetTransform(r.URL.Path)
-	if transform == nil {
-		http.Error(w, "Did not found Transform for required URL path", http.StatusNoContent)
-		return
-	}
-
-	// Get the request body, and return if failed or empty
-	r.ParseForm()
-	data, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if len(data) == 0 {
-		http.Error(w, "Error: No form Data in Request body", http.StatusBadRequest)
-		return
-	}
-
-	// Unmarshal the Maltego Request into its type.
-	var request = Message{}
-	err = xml.Unmarshal(data, &request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Create a new Transform instance based on the model.
-	instance := transform.newInstanceFromRequest(request)
-
-	// Run the transform.
-	err = transform.run(instance)
-
-	// Marshal its output (success or failure)
-	response, err := instance.marshalOutput(err)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Finally, write the output to the HTTP response
-	fmt.Fprintf(w, string(response))
+// TransformServer - A transform server outputs a complete Maltego
+// configuration file (.mtz) with transforms, sets, entities, settings, etc...
+func (ts *TransformServer) marshalConfig() (data []byte, err error) {
+	return
 }
