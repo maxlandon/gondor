@@ -27,6 +27,8 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/maxlandon/gondor/maltego/configuration"
 )
 
 // TransformFunc - This type defines what is the valid implementation of a Transform
@@ -45,13 +47,19 @@ type TransformFunc func(t *Transform) (err error)
 // and functioning of an equivalent Maltego Client Transform, and exactly as
 // in the Python code, is NOT restricted to any type of output Entity.
 type Transform struct {
-	Description string        // Defaults to the Go-doc comment of the user-provided TransformFunc
-	Request     Message       // The incoming Transform request, input Entity, and all transform settings.
-	run         TransformFunc // The transform function implementation, declared and passed by the user
-	entities    []Entity      // All entities to be returned as the Transform output.
-	messages    []MessageUI   // Transform log messages
-	exceptions  []Exception   // All errors throwed during execution.
-	mutex       *sync.RWMutex // Concurrency
+	// Base Information
+	configuration.TransformInfo                   // The user can set this to his wish.
+	sets                        []string          // The transform sets to which the transform belongs
+	inputType                   string            // The transform is passed a maltego.ValidEntity and populates this with info
+	Settings                    TransformSettings // All settings for this transform, and their local configuration.
+
+	// Operating Parameters
+	Request    Message       // The incoming Transform request, input Entity, and all transform settings.
+	run        TransformFunc // The transform function implementation, declared and passed by the user
+	entities   []Entity      // All entities to be returned as the Transform output.
+	messages   []MessageUI   // Transform log messages
+	exceptions []Exception   // All errors throwed during execution.
+	mutex      *sync.RWMutex // Concurrency
 }
 
 // NewTransform - Instantiate a new Transform by passing a valid Transform function
@@ -65,16 +73,36 @@ type Transform struct {
 // cases, you should always register them BEFORE serving the Transforms to their client.
 func NewTransform(name string, run TransformFunc, settings ...TransformSetting) Transform {
 	t := Transform{
-		Description: getTransformDescription(run),
-		run:         run,
-		mutex:       &sync.RWMutex{},
+		// TODO: set default fields to true when they need
+		TransformInfo: configuration.TransformInfo{},
+		run:           run,
+		mutex:         &sync.RWMutex{},
 	}
+	t.Description = getTransformDescription(run)
+
 	return t
 }
 
 //
 // Maltego Transforms - User API -------------------------------------------------------------
 //
+
+// AddToSet - Include your transform in a specific set of Transforms,
+// for classification in the Maltego client. You can add your transform
+// to multiple sets, thus you can call this function multiple times.
+func (t *Transform) AddToSet(set string) {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	t.sets = append(t.sets, set)
+}
+
+// AddSetting - Before registering your transform to a maltego.TransformServer (or before
+// serving it or generating its configuration file), you can add Settings (as properties).
+func (t *Transform) AddSetting(s TransformSetting) {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	t.Settings.settings = append(t.Settings.settings, s)
+}
 
 // AddEntity - Add an Entity to the list of entities to be sent in the Transform response.
 // Generally, you want to call it with either yourGoType.AsEntity() function, or directly
@@ -112,7 +140,7 @@ func (t *Transform) Warnf(format string, args ...interface{}) {
 	t.mutex.RLock()
 	defer t.mutex.RUnlock()
 	msg := fmt.Sprintf(format, args...)
-	t.messages = append(t.messages, MessageUI{Text: msg, Type: "Warning"})
+	t.messages = append(t.messages, MessageUI{Text: msg, Type: "Partial"})
 }
 
 // Errorf - Log an error-level message in the Maltego transform window.
@@ -132,14 +160,14 @@ func (t *Transform) Errorf(format string, args ...interface{}) error {
 
 // newInstanceFromRequest - Instantiate a new transform instance, copying a
 // few of the fields from us (the model), and populating with a new Request.
-func (t *Transform) newInstanceFromRequest(request Message) *Transform {
+func (t *Transform) newInstanceFromRequest(request Message) (nt *Transform) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	return &Transform{
-		Description: t.Description,
-		Request:     request,
-		run:         t.run,
-		mutex:       &sync.RWMutex{},
+		TransformInfo: t.TransformInfo,
+		Request:       request,
+		run:           t.run,
+		mutex:         &sync.RWMutex{},
 	}
 }
 
@@ -170,4 +198,18 @@ func (t *Transform) marshalOutput(runErr error) (out []byte, err error) {
 
 	// Marshal the overall message and its content.
 	return xml.Marshal(message)
+}
+
+// marshalConfig - The transform packages itself into an XML string,
+// for inclusion in a Maltego Transform configuration file.
+func (*Transform) marshalConfig() (out []byte, err error) {
+	return
+}
+
+// Transforms - Holds a map of Transforms.
+type Transforms map[string]*Transform
+
+// MarshalXML -
+func (t Transforms) MarshalXML(e *xml.Encoder, start xml.StartElement) (err error) {
+	return
 }

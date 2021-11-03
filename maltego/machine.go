@@ -102,3 +102,13 @@ func (m *Machine) Run() {
 // "paterva.v2.DomainToMXrecord_DNS"
 func (m *Machine) RunExtern(qualifiedTransformName string) {
 }
+
+//
+// Maltego Machines - Internals -------------------------------------------------------------
+//
+
+// writeConfig - The Machine creates a file in path/Machines/MachineName,
+// and writes itself as an XML message into it.
+func (m Machine) writeConfig(path string) (err error) {
+	return
+}
