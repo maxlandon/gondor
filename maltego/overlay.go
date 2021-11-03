@@ -72,6 +72,39 @@ const (
 	OverlayText   OverlayType = "text"
 )
 
+// isOverlayType - Verify the overlay struct tag, and its type value
+func isOverlayType(a string) bool {
+	list := []OverlayType{
+		OverlayText,
+		OverlayImage,
+		OverlayColour,
+	}
+	for _, b := range list {
+		if string(b) == a {
+			return true
+		}
+	}
+	return false
+}
+
+// isOverlayPosition - Verify the overlay tag, and its position value
+func isOverlayPosition(a string) bool {
+	list := []OverlayPosition{
+		OverlayCenter,
+		OverlayNorth,
+		OverlayNorthWest,
+		OverlaySouth,
+		OverlaySouthWest,
+		OverlayWest,
+	}
+	for _, b := range list {
+		if string(b) == a {
+			return true
+		}
+	}
+	return false
+}
+
 // Label - Used to convey extra information associated with an Entity in the Maltego
 // client GUI. Unlike entity fields, labels are only transmitted in response messages
 // and cannot be passed from transform to transform as a source of input.

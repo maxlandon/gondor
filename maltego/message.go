@@ -24,13 +24,13 @@ import (
 
 // Message - A type containing all the output elements of a Transform.
 type Message struct {
-	x xml.Name // Modify the xml tag name for this type
+	x xml.Name // Modify the xml tag name for this type ("MaltegoMessage")
 
 	// Request
-	Value      string             `xml:"-"`
-	Type       string             `xml:"-"`
-	Weight     int                `xml:"Weight"`
-	Slider     int                `xml:"-"`
+	Value      string             `xml:"-"`               // Fetched with custom UnmarshalXML
+	Type       string             `xml:"-"`               // Fetched from the Entity
+	Weight     int                `xml:"Weight"`          // Weight of Input Entity
+	Slider     int                `xml:"-"`               // Transform limits, fetched with custom UnmarshalXML
 	Geneaology []Geneaology       `xml:"Geneaology"`      // All the parent transforms and entities tree
 	Entity     Entity             `xml:"-"`               // A unique input Entity
 	Settings   []TransformSetting `xml:"TransformFields"` // Settings for Transform (global/local, and their properties)
@@ -66,7 +66,8 @@ func (m Message) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error
 	}
 
 	// And finally write the temp struct contents to the Message
-	m.Entity = temp.Entities[0]      // Hard-coded in Maltego Python/Go libs
+	m.Entity = temp.Entities[0] // Hard-coded in Maltego Python/Go libs
+	m.Type = m.Entity.Type
 	m.Value = temp.Values[0]         // Same hard-coding
 	m.Slider = temp.Slider.SoftLimit // And finally, the limit of output entities
 

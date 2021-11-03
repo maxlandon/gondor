@@ -21,6 +21,7 @@ package maltego
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -54,9 +55,9 @@ type Entity struct {
 	// Display properties
 	// These properties are all the other properties related to
 	// how the entity is displayed, with its various overlays.
-	Link     Link          `xml:"-"`                        // All settings of the link to/from this entity
+	Link     Link          `xml:"-"`                        // Wraps itself into Properties later.
 	IconURL  string        `xml:"IconURL,omitempty"`        // An optional URL to the Entity main icon
-	Bookmark BookmarkColor `xml:"-"`                        // Set the bookmark color
+	Bookmark BookmarkColor `xml:"-"`                        // Wraps itself into Properties later.
 	Overlays Overlays      `xml:"Overlays"`                 // Access the various overlays by their position.
 	Labels   []Label       `xml:"DisplayInformation>Label"` // Additional display information
 
@@ -225,9 +226,9 @@ func (e *Entity) Unmarshal(eType ValidEntity) (err error) {
 // Maltego Entity - Internal Implementation -----------------------------------------------
 //
 
-// TranslateProperties - Creates Entity properties from some builtin
+// getBaseProperties - Creates Entity properties from some builtin
 // types of the Go Entity, like Links, Bookmarks, etc.
-func (e *Entity) TranslateProperties() (err error) {
+func (e *Entity) getBaseProperties() (err error) {
 
 	// The link should add all its content to the list of properties
 	e.AddProperty(Field{
@@ -270,34 +271,159 @@ func (e *Entity) TranslateProperties() (err error) {
 	return
 }
 
-// translateNativeData - This function uses reflection to package all valid fields in the struct
+// getGoProperties - This function uses reflection to package all valid fields in the struct
 // (as interface) stored by the Entity, as properties. We overwrite them directly each time.
-func (e *Entity) translateNativeData() (err error) {
+func (e *Entity) getGoProperties() (err error) {
 	if e.data == nil {
 		return
+	}
+
+	// For everything but structs, we directly package and return.
+	switch e.data.(type) {
+	case struct{}, *struct{}:
+		// But we send structs in a recursive loop, for any embedded structs.
+		ptrval := reflect.ValueOf(e.data)
+		realval := reflect.Indirect(ptrval)
+		e.marshalStruct("", realval, nil)
+	default:
+		// Simply add the field with fmt.Sprintf representation of the data.
+		// This might be big, so people better know what they are passing.
+		e.AddProperty(Field{
+			Name:         "Go Type: " + reflect.TypeOf(e.data).String(),
+			MatchingRule: MatchLoose,
+			Value:        e.data,
+		})
 	}
 
 	return
 }
 
-func newEntityToXML(e interface{}, fieldDecoratorName string) {
-	osField := reflect.Indirect(reflect.ValueOf(e)).FieldByName(fieldDecoratorName)
-	if osField.Kind() == reflect.String {
+// marshalStruct - Marshal a struct with an arbitrary level of nesting, and package its content as Properties.
+func (e *Entity) marshalStruct(namespace string, realval reflect.Value, sField *reflect.StructField) {
 
+	// Always add a "root" separation property, with the type as Key and the name as value
+	e.AddProperty(Field{
+		Name:         getNamespace(namespace, realval.Type().Name()),
+		Display:      realval.String(),
+		MatchingRule: MatchLoose,
+		Value:        "Go type",
+	})
+
+	// Compute the current namespace for this struct
+	nested := getNamespace(namespace, sField.Name)
+
+	// For each field, check tags
+	numFields := realval.Type().NumField()
+	for fieldCount := 0; fieldCount < numFields; fieldCount++ {
+		field := realval.Type().Field(fieldCount)
+		fieldKind := field.Type.Kind()
+		valueKind := field.Type.Elem().Kind()
+
+		fieldVal := realval.Field(fieldCount) // Can be nil
+
+		// We can't read unexported fields, nor
+		if !field.IsExported() {
+			continue
+		}
+
+		// If the field is itself a struct, create a new
+		// namespace level and call this func recursively.
+		if field.Type.Kind() == reflect.Struct {
+			e.marshalStruct(nested, fieldVal, &field)
+			continue
+		}
+
+		// If the field is a pointer to a struct, we must
+		// check that it's non nil here, cannot loop before.
+		if fieldKind == reflect.Ptr && valueKind == reflect.Struct {
+
+			// Initialize an empty value in the struct, then
+			// go into a new recursive loop on this one.
+			if fieldVal.IsNil() {
+				fieldVal = reflect.New(fieldVal.Type().Elem())
+			}
+			e.marshalStruct(nested, reflect.Indirect(fieldVal), &field)
+			continue
+		}
+
+		// The only required is display:"", not nil
+		if _, ok := field.Tag.Lookup("display"); !ok {
+			continue
+		}
+
+		// Process MatchRules and Aliases
+		var match = MatchLoose
+		value, ok := field.Tag.Lookup("match")
+		if ok && value != "" {
+			match = MatchStrict
+		}
+		aliasTag, ok := field.Tag.Lookup("alias")
+		if !ok || aliasTag == "" {
+			aliasTag = strings.ToLower(field.Name)
+		}
+
+		// Else, pick the tags and populate field
+		f := Field{
+			Name:         namespace,
+			Value:        field.Name,
+			Display:      field.Type.Name(),
+			MatchingRule: match,
+			Alias:        aliasTag,
+		}
+		e.AddProperty(f)
+
+		// Finally, if this field is marked as an overlay, create it.
+		overlayTag, yes := field.Tag.Lookup("overlay")
+		if !yes {
+			continue
+		}
+		e.addFieldAsOverlay(f, overlayTag)
 	}
 
-	numFields := reflect.TypeOf(e).Elem().NumField()
+	return
+}
 
-	// For each struct field, process its tags
-	for i := 0; i < numFields; i++ {
-		//
-		field := reflect.TypeOf(e).Elem().Field(i)
-		display, ok := field.Tag.Lookup("display")
-		if !ok {
-		} else {
-			fmt.Println(display)
+// getNamespace - Compute the namespace for a field (or a series of them)
+func getNamespace(namespace, name string) string {
+	full := strings.Join([]string{namespace, strings.ToLower(name)}, ".")
+	return strings.Trim(full, ".")
+}
+
+// addFieldAsOverlay - A struct field has been tagged as overlay,
+// so validate it, create it and register it to the entity.
+func (e *Entity) addFieldAsOverlay(f Field, tag string) {
+	infos := strings.Split(tag, ",")
+	if len(infos) == 1 && infos[0] == "" {
+		return
+	}
+
+	// If we have only the position, we're fine,
+	// we default the type as text.
+	if len(infos) == 1 && isOverlayPosition(infos[0]) {
+		e.AddOverlay(f.Name, OverlayPosition(infos[0]), OverlayText)
+		return
+	}
+
+	// If we have two items, we will be fine in one case, not in the other
+	if len(infos) == 2 {
+		// If none is good, return
+		if !isOverlayPosition(infos[0]) && !isOverlayType(infos[1]) {
+			return
+		}
+		// Type is invalid, use text as default
+		if isOverlayPosition(infos[0]) && !isOverlayType(infos[1]) {
+			e.AddOverlay(f.Name, OverlayPosition(infos[0]), OverlayText)
+			return
+		}
+		// Both types are valid, populate both
+		if isOverlayPosition(infos[0]) && isOverlayType(infos[1]) {
+			e.AddOverlay(f.Name, OverlayPosition(infos[0]), OverlayType(infos[1]))
 		}
 	}
-	// field, ok := reflect.TypeOf(e).Elem().FieldByName(fieldDecoratorName)
-	// display, ok := field.Tag.Lookup("display")
+}
+
+// writeConfig - The Entity creates a file in path/Entities/EntityName,
+// and writes itself as an XML message into it.
+func (e Entity) writeConfig(path string) (err error) {
+	return
 }

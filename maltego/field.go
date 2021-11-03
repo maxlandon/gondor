@@ -33,7 +33,10 @@ type Field struct {
 	Display      string       `xml:"DisplayName,attr"`  // The display name of this field
 	MatchingRule MatchingRule `xml:"MatchingRule,attr"` // The individual match rule for this field
 	Alias        string       `xml:"-"`                 // An alias for the field, default to .Name
-	Value        interface{}  `xml:",cdata"`            // Its value, automatically passed as an XML string
+	Hidden       bool         // Hide this field in the Entity Properties window.
+	ReadOnly     bool         // The user cannot edit this value from the Maltego GUI
+	SampleValue  interface{}
+	Value        interface{} `xml:",cdata"` // Its value, automatically passed as an XML string
 }
 
 // Properties - Holds all the Properties of an Entity, used to ensure
