@@ -18,6 +18,7 @@ package maltego
    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// AuthenticationType - The Authentication required to access and run a Server's transforms.
 type AuthenticationType string
 
 const (

@@ -21,6 +21,7 @@ package maltego
 import (
 	"fmt"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"sync"
 )
@@ -45,12 +46,13 @@ type ValidEntity interface {
 // to add and query its properties, as well as to set its various Maltego details.
 type Entity struct {
 	// Base properties
-	Namespace string `xml:"-"`         // The Maltego namespace of this entity (Maltego entities always fit within a tree)
-	Alias     string `xml:"-"`         // The alias under which the Entity can be searched for/ grabbed.
-	Type      string `xml:"Type,attr"` // The string representation of the Entity type (determined through reflection)
-	Category  string `xml:"-"`         // The category of entities to which this category belongs (eg: a DNS server => services)
-	Value     string `xml:",cdata"`    // The value of the Entity, used by the Maltego client
-	Weight    int    `xml:"Weight"`    // The weight attributed to this entity on the graph
+	Namespace   string `xml:"-"` // The Maltego namespace of this entity (Maltego entities always fit within a tree)
+	DisplayName string // Defaults to the camelCase-split Entity type if Go native.
+	Alias       string `xml:"-"`         // The alias under which the Entity can be searched for/ grabbed.
+	Type        string `xml:"Type,attr"` // The string representation of the Entity type (determined through reflection)
+	Category    string `xml:"-"`         // The category of entities to which this category belongs (eg: a DNS server => services)
+	Value       string `xml:",cdata"`    // The value of the Entity, used by the Maltego client
+	Weight      int    `xml:"Weight"`    // The weight attributed to this entity on the graph
 
 	// Display properties
 	// These properties are all the other properties related to
@@ -82,15 +84,13 @@ type Entity struct {
 // for the Entity, but not its struct fields: this is because you should not ever need
 // them after this function. Transforms only care about Go native types.
 //
-// Strut Tags & Type Compliance:
+// Struct Tags & Type Compliance:
 //
 // The following is an exhaustive list of all valid and/or required struct
 // field tags for a type to be considered a valid & working Maltego Entity.
 // We take the example of a field named IP, of type string:
 //
-// display:"IP Address"   - The display name of the field in Maltego (default: IP).
-// name:"IP"              - The programmatic, Java/MaltegoXML name of the field
-//                          (default is set through reflect).
+// display:"IP Address"   - Required. The display name of the field in Maltego
 // strict:"yes"           - If non nil, the Matching Rule of this field is "strict",
 //                          otherwise it's "loose".
 //                          ("loose"/"strict", default:"loose")
@@ -99,19 +99,38 @@ type Entity struct {
 //                          Valid positions: W, N, S, C, NW, SW
 //                          Valid types: text, image, colour/color
 //                          If color is used, must be a valid RGB format (eg. #45e06f)
+// hidden:"yes"           - If not nil, the field is hidden in the Properties Window.
+// sample:"127.0.0.1"     - A value used when the Entity is created manually in Maltego.
+// default:"0.0.0.0"      - A value that is always populated by default.
 //
 func NewEntity(data interface{}) Entity {
 	e := Entity{
-		Overlays:   map[OverlayPosition]Overlay{},
-		Properties: map[string]Field{},
+		Overlays:   Overlays{},
+		Properties: Properties{},
 		mutex:      &sync.RWMutex{},
+		data:       data,
 	}
 
 	// Get the namespace + Name from the Go runtime package + type
-	// Set the Display name to the type name with spaces and caps
-	// Set the alias
+	e.Namespace = reflect.TypeOf(data).Elem().PkgPath()
+	e.Type = reflect.TypeOf(data).Elem().Name()
 
-	// Compute default description from the core Go type
+	// Set the Display name to the type name with spaces and caps
+	e.DisplayName = e.Type
+	bi, _ := debug.ReadBuildInfo()
+	fmt.Println(bi.Main.Path)
+	// name := "DNSToIp"
+	// re := regexp.MustCompile(`([0-9]+)`)
+	// name = re.ReplaceAllString(name, "$1")
+	// fmt.Println(name)
+	// re2 := regexp.MustCompile(`([a-z])([A-Z]+)`)
+	// name = re2.ReplaceAllString(name, "$1$1")
+	// fmt.Println(name)
+	// re3 := regexp.MustCompile(`([A-Z]+)([A-Z][a-z])`)
+	// name = re3.ReplaceAllString(name, "$1$1")
+	// fmt.Println(name)
+	// re := regexp.MustCompile(`[A-Z][a-z]+|[A-Z]+(![a-z])`)
+	// e.DisplayName = strings.Join(re.FindAllString(e.Type, -1), " ")
 
 	return e
 }
@@ -181,9 +200,9 @@ func (e *Entity) AddOverlay(value string, pos OverlayPosition, oType OverlayType
 	e.Overlays[pos] = overlay
 }
 
-// AddDisplayInformation - Add a specific Display information to this Entity.
+// AddLabel - Add a specific Display information to this Entity.
 // If the title argument is nil (""), it will default to "Info".
-func (e *Entity) AddDisplayInformation(title, content string) {
+func (e *Entity) AddLabel(title, content string) {
 	e.mutex.RLock()
 	defer e.mutex.RUnlock()
 	if title == "" {

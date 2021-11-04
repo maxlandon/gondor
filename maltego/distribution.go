@@ -35,10 +35,10 @@ type Distribution struct {
 	// Base information
 
 	// Contents
-	entities   []Entity                        // Entities write themselves to files
-	transforms []configuration.Transform       // Transforms write themselves to files
-	machines   []Machine                       // Machines write themselves to files
-	servers    []configuration.TransformServer // Servers write themselves to files
+	entities   map[string]Entity                        // Entities write themselves to files
+	transforms map[string]configuration.Transform       // Transforms write themselves to files
+	machines   map[string]Machine                       // Machines write themselves to files
+	servers    map[string]configuration.TransformServer // Servers write themselves to files
 	// Assets
 
 	// Other
@@ -48,7 +48,9 @@ type Distribution struct {
 // NewDistribution - Create a new Maltego Distribution,
 // with default operating parameters and empty contents.
 func NewDistribution() Distribution {
-	return Distribution{}
+	return Distribution{
+		mutex: &sync.RWMutex{},
+	}
 }
 
 //

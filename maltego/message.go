@@ -97,3 +97,11 @@ type MessageUI struct {
 	Text string `xml:"text"`
 	Type string `xml:"type"`
 }
+
+// Geneaology - A geneaologic node, member of a Geneaology
+// (list of nodes) transmitted in a Maltego Transform Request.
+type Geneaology struct {
+	Name    string
+	OldName string
+	Type    string
+}

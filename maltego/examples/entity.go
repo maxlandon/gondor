@@ -28,9 +28,7 @@ import (
 // field tags for a type to be considered a valid & working Maltego Entity.
 // We take the example of a field named IP, of type string:
 //
-// display:"IP Address"   - The display name of the field in Maltego (default: IP).
-// name:"IP"              - The programmatic, Java/MaltegoXML name of the field
-//                          (default is set through reflect).
+// display:"IP Address"   - Required. The display name of the field in Maltego
 // strict:"yes"           - If non nil, the Matching Rule of this field is "strict",
 //                          otherwise it's "loose".
 //                          ("loose"/"strict", default:"loose")
@@ -39,6 +37,9 @@ import (
 //                          Valid positions: W, N, S, C, NW, SW
 //                          Valid types: text, image, colour/color
 //                          If color is used, must be a valid RGB format (eg. #45e06f)
+// hidden:"yes"           - If not nil, the field is hidden in the Properties Window.
+// sample:"127.0.0.1"     - A value used when the Entity is created manually in Maltego.
+// default:"0.0.0.0"      - A value that is always populated by default.
 //
 // ------------------------------------------
 
@@ -46,9 +47,9 @@ import (
 // "{{Target}} -" name, so as to automatically include this
 // comment as a description to your Target in the Maltego Client.
 type Target struct {
-	OS       string `display:"Operating System" name:"os" strict:"yes" alias:"alias"`
-	Hostname string `name:"hostname" strict:"yes" alias:"host"`
-	IP       string `display:"IP Address" name:"ip" alias:"address" overlay:"W,image"`
+	OS       string `display:"Operating System" strict:"yes" alias:"alias"`
+	Hostname string `strict:"yes" alias:"host"`
+	IP       string `display:"IP Address" alias:"address" overlay:"W,image"`
 }
 
 // AsEntity - This function makes the Target type a valid Maltego entity.

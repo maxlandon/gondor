@@ -52,6 +52,7 @@ func NewTransformServer(config interface{}) *TransformServer {
 		Name:        "Local",
 		Description: "Go Local Transforms, hosted on this machine.",
 
+		Transforms: Transforms{},
 		// config: config,
 		hs:    http.Server{},
 		mux:   http.NewServeMux(),
