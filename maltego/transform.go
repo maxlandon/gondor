@@ -26,6 +26,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/maxlandon/gondor/maltego/configuration"
@@ -50,7 +51,8 @@ type Transform struct {
 	// Base Information
 	configuration.TransformInfo                   // The user can set this to his wish.
 	sets                        []string          // The transform sets to which the transform belongs
-	inputType                   string            // The transform is passed a maltego.ValidEntity and populates this with info
+	input                       ValidEntity       // The transform is passed a maltego.ValidEntity and populates this with info
+	output                      []ValidEntity     // Output entities for this transform
 	Settings                    TransformSettings // All settings for this transform, and their local configuration.
 
 	// Operating Parameters
@@ -81,6 +83,22 @@ func NewTransform(name string, run TransformFunc, settings ...TransformSetting) 
 	t.Description = getTransformDescription(run)
 
 	return t
+}
+
+// NewTransformWith - Declare a new Transform, with a Run implementation, an Input entity
+// type and any number of OutputEntities. The input/output entities are merely used to check
+// that we will be able to unmarshal Maltego entities into them, by verifying both types match.
+// You'll still need to perform the unmarshalling operation yourself, with entity.Unmarshal().
+func NewTransformWith(run TransformFunc, input ValidEntity, output ...ValidEntity) {
+	t := Transform{
+		// TODO: set default fields to true when they need
+		TransformInfo: configuration.TransformInfo{},
+		input:         input,
+		output:        output,
+		run:           run,
+		mutex:         &sync.RWMutex{},
+	}
+	t.Description = getTransformDescription(run)
 }
 
 //
@@ -198,6 +216,22 @@ func (t *Transform) marshalOutput(runErr error) (out []byte, err error) {
 
 	// Marshal the overall message and its content.
 	return xml.Marshal(message)
+}
+
+// Check that the Transform Input Entity native type (if any)
+// is the same type as the request Entity one.
+func (t *Transform) checkInputEntity(input Entity) (err error) {
+	tInput := t.input.AsEntity()
+
+	// Always check the string values of our Entities, must be enough
+	inputFQN := strings.Join([]string{input.Namespace, input.Type}, ".")
+	wantedFQN := strings.Join([]string{tInput.Namespace, tInput.Type}, ".")
+	if inputFQN != wantedFQN {
+		return fmt.Errorf("Mismatch native Go entity types: wanted %s, got %s",
+			wantedFQN, inputFQN)
+	}
+
+	return nil
 }
 
 // marshalConfig - The transform packages itself into an XML string,
