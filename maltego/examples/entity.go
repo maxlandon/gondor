@@ -72,9 +72,10 @@ func (tgt *Target) AsEntity() (e maltego.Entity) {
 // and some others ignored by default. You will be able, however to add them on the
 // fly from within a Transform implementation, with entity.AddField().
 type Credential struct {
-	Login      string `display:"Login"`                   // Declaring a new Maltego field
-	PublicKey  []byte `display:"Public Key" strict:"yes"` // This PublicKey is unique among all graph entities
-	PrivateKey []byte // For whatever reason you might want NOT to push the PrivateKey to Maltego
+	Target     `base:"yes"` // Embbedding a maltego.ValidEntity as a Base Entity
+	Login      string       `display:"Login"`                   // Declaring a new Maltego field
+	PublicKey  []byte       `display:"Public Key" strict:"yes"` // This PublicKey is unique among all graph entities
+	PrivateKey []byte       // For whatever reason you might want NOT to push the PrivateKey to Maltego
 }
 
 // AsEntity - This type is a valid Maltego entity.

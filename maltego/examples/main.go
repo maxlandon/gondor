@@ -19,9 +19,7 @@ package main
 */
 
 import (
-	"fmt"
 	"log"
-	"reflect"
 
 	"github.com/maxlandon/gondor/maltego"
 )
@@ -64,8 +62,6 @@ func main() {
 	// Here, the credential can be both an Entity and a Transform,
 	// but you have to instantiate it first.
 	cred := &Credential{}
-	fmt.Println(reflect.TypeOf(cred).Elem().PkgPath())
-	fmt.Println(reflect.TypeOf(cred).Elem().Name())
 
 	// Marshalling an native type back to an Entity, and modifying its fields.
 	credential := cred.AsEntity()
@@ -117,10 +113,8 @@ func main() {
 	// All transforms are automatically bound to a URL
 	// path matching their complete namespace + Name.
 	// Their Entities are also registered in the Server's distribution.
-	fmt.Println(transform.Name)
-	fmt.Println(transformOnly.Name)
-	// server.RegisterTransform(&transformOnly)
-	// server.RegisterTransform(&transform)
+	server.RegisterTransform(&transformOnly)
+	server.RegisterTransform(&transform)
 
 	// B - Register to a distribution -
 	// This has a drawback, which is that the transform will be mapped
